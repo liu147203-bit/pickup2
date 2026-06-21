@@ -1,0 +1,40 @@
+name: Assemble portable package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".package-parts/**"
+      - ".github/workflows/assemble-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Rebuild and verify ZIP
+        shell: bash
+        run: |
+          cat .package-parts/part*.b64 | base64 --decode > PickupWindows-portable.zip
+          echo "1d977f1d0bdade68fceb85d113429466a9b3f73395f48eb9a82ab5846fa51b40  PickupWindows-portable.zip" | sha256sum --check -
+          unzip -t PickupWindows-portable.zip
+
+      - name: Commit verified ZIP
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PickupWindows-portable.zip
+          if git diff --cached --quiet; then
+            echo "Package is already up to date."
+          else
+            git commit -m "Add verified portable Windows package"
+            git push
+          fi
